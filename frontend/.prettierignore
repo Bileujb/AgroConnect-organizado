@@ -1,0 +1,7 @@
+# Pastas geradas ou de terceiros: o Prettier não deve mexer nelas.
+node_modules
+android
+ios
+dist
+.expo
+package-lock.json
