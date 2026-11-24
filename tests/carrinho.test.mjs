@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { adicionarAoCarrinho, chaveCarrinho, lerCarrinhoSalvo } from '../src/utils/carrinho.js';
+import { adicionarAoCarrinho, alterarQuantidade, chaveCarrinho, lerCarrinhoSalvo } from '../src/utils/carrinho.js';
 const produto = { id: 'p1', produtorId: 'u1', nome: 'Alface', preco: 3.5, quantidadeEstoque: 5 };
 test('somar um item existente respeita o estoque total, não apenas a última adição', () => {
   const itens = adicionarAoCarrinho([], produto, 4);
@@ -41,4 +41,19 @@ test('a unidade de venda do produto vai para o item e sobrevive ao salvar', () =
   const itens = adicionarAoCarrinho([], { ...produto, unidade: 'kg' }, 2);
   assert.equal(itens[0].unidade, 'kg');
   assert.equal(lerCarrinhoSalvo(JSON.stringify(itens))[0].unidade, 'kg');
+});
+test('editar a quantidade de um item do carrinho respeita o estoque e não mexe nos outros', () => {
+  let itens = adicionarAoCarrinho([], produto, 2);
+  itens = adicionarAoCarrinho(itens, { ...produto, id: 'p2' }, 1);
+  const editados = alterarQuantidade(itens, 'p1', 5, 5);
+  assert.deepEqual(editados.map((i) => i.quantidade), [5, 1]);
+  assert.equal(alterarQuantidade(itens, 'p1', 1, 5)[0].quantidade, 1);
+  assert.equal(itens[0].quantidade, 2);
+  assert.throws(() => alterarQuantidade(itens, 'p1', 6, 5), /estoque/);
+  for (const valor of [0, -1, 1.5, NaN]) assert.throws(() => alterarQuantidade(itens, 'p1', valor, 5));
+  assert.throws(() => alterarQuantidade(itens, 'nao-existe', 1, 5));
+});
+test('sem estoque conhecido, a edição aceita a quantidade e deixa o servidor validar', () => {
+  const itens = adicionarAoCarrinho([], produto, 2);
+  assert.equal(alterarQuantidade(itens, 'p1', 50, undefined)[0].quantidade, 50);
 });
