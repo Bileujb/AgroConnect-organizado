@@ -8,6 +8,15 @@ export function adicionarAoCarrinho(itens, produto, quantidade = 1) {
     precoUnitario: produto.preco, quantidade, unidade: produto.unidade || 'unidade' }];
 }
 
+// Troca a quantidade de um item que já está no carrinho (edição pela tela do carrinho).
+// `estoque` é o estoque atual do produto; sem ele (lista ainda não carregada) o servidor valida no checkout.
+export function alterarQuantidade(itens, produtoId, quantidade, estoque) {
+  if (!Number.isInteger(quantidade) || quantidade < 1) throw new Error('Quantidade inválida.');
+  if (Number.isFinite(estoque) && quantidade > estoque) throw new Error('A quantidade excede o estoque disponível.');
+  if (!itens.some((i) => i.produtoId === produtoId)) throw new Error('Item não está no carrinho.');
+  return itens.map((i) => (i.produtoId === produtoId ? { ...i, quantidade } : i));
+}
+
 // Cada conta tem seu próprio carrinho salvo, então outra pessoa no mesmo celular não vê os itens.
 export function chaveCarrinho(usuarioId) {
   return `agroconnect.carrinho.${usuarioId}`;

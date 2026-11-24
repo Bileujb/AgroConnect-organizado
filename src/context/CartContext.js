@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useMemo, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './AuthContext';
-import { adicionarAoCarrinho, chaveCarrinho, lerCarrinhoSalvo } from '../utils/carrinho';
+import { adicionarAoCarrinho, alterarQuantidade, chaveCarrinho, lerCarrinhoSalvo } from '../utils/carrinho';
 const CartContext = createContext(null);
 export function CartProvider({ children }) {
   const { usuario } = useAuth();
@@ -40,6 +40,9 @@ export function CartProvider({ children }) {
     const novos = adicionarAoCarrinho(itens, produto, quantidade);
     setItens(novos);
   }
+  function atualizarQuantidade(produtoId, quantidade, estoque) {
+    setItens(alterarQuantidade(itens, produtoId, quantidade, estoque));
+  }
   function chaveCheckout() {
     const assinatura = JSON.stringify(itens.map((i) => [i.produtoId, i.quantidade]));
     if (assinatura !== solicitacao.current.assinatura) solicitacao.current = {
@@ -48,7 +51,7 @@ export function CartProvider({ children }) {
     return solicitacao.current.chave;
   }
   const valorTotal = useMemo(() => itens.reduce((s, i) => s + i.quantidade * i.precoUnitario, 0), [itens]);
-  return <CartContext.Provider value={{ itens, carregado, adicionarItem, valorTotal, chaveCheckout,
+  return <CartContext.Provider value={{ itens, carregado, adicionarItem, atualizarQuantidade, valorTotal, chaveCheckout,
     removerItem: (id) => setItens((atual) => atual.filter((i) => i.produtoId !== id)),
     limparCarrinho: () => { setItens([]); solicitacao.current = { assinatura: '', chave: '' }; },
   }}>{children}</CartContext.Provider>;
