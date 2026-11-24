@@ -77,9 +77,10 @@ public class PedidoService {
             UUID pedido=UUID.randomUUID();
             if (totais.get(grupo.getKey()).compareTo(new BigDecimal("9999999999.99"))>0) throw ApiException.invalido("Valor máximo do pedido excedido.");
             banco.jdbc.update("""
-                insert into agroconnect.pedidos (id,checkout_id,consumidor_id,produtor_id,valor_total,endereco_entrega,cidade_entrega)
-                values (?,?,?,?,?,?,?)
-                """,pedido,checkout,Banco.id(usuario),grupo.getKey(),totais.get(grupo.getKey()),usuario.get("enderecoEntrega"),usuario.get("cidade"));
+                insert into agroconnect.pedidos (id,checkout_id,consumidor_id,produtor_id,valor_total,endereco_entrega,cidade_entrega,forma_pagamento,pago)
+                values (?,?,?,?,?,?,?,?,?)
+                """,pedido,checkout,Banco.id(usuario),grupo.getKey(),totais.get(grupo.getKey()),usuario.get("enderecoEntrega"),usuario.get("cidade"),
+                dados.formaOuPadrao(),!"entrega".equals(dados.formaOuPadrao()));
             for (var item:grupo.getValue()) {
                 banco.jdbc.update("""
                     insert into agroconnect.itens_pedido (id,pedido_id,produto_id,nome,quantidade,preco_unitario) values (?,?,?,?,?,?)

@@ -34,18 +34,26 @@ public class ProdutoService {
         Banco.exigirTipo(usuario,"produtor"); validarImagem(dados.imagem());
         UUID id=UUID.randomUUID();
         banco.jdbc.update("""
-            insert into agroconnect.produtos (id,produtor_id,nome,descricao,preco,categoria,quantidade_estoque,imagem)
-            values (?,?,?,?,?,?,?,?)
-            """,id,Banco.id(usuario),dados.nome().trim(),PerfilService.seguro(dados.descricao()),dados.preco(),dados.categoria(),dados.quantidadeEstoque(),dados.imagem());
+            insert into agroconnect.produtos (id,produtor_id,nome,descricao,preco,categoria,quantidade_estoque,unidade,imagem)
+            values (?,?,?,?,?,?,?,?,?)
+            """,id,Banco.id(usuario),dados.nome().trim(),PerfilService.seguro(dados.descricao()),dados.preco(),dados.categoria(),dados.quantidadeEstoque(),dados.unidadeOuPadrao(),dados.imagem());
         return obter(id);
     }
     public Map<String,Object> atualizar(Map<String,Object> usuario, UUID id, Dados.Produto dados) {
         Banco.exigirTipo(usuario,"produtor"); validarImagem(dados.imagem());
         int atualizados=banco.jdbc.update("""
-            update agroconnect.produtos set nome=?,descricao=?,preco=?,categoria=?,quantidade_estoque=?,imagem=?
+            update agroconnect.produtos set nome=?,descricao=?,preco=?,categoria=?,quantidade_estoque=?,unidade=?,imagem=?
             where id=? and produtor_id=? and ativo=true
-            """,dados.nome().trim(),PerfilService.seguro(dados.descricao()),dados.preco(),dados.categoria(),dados.quantidadeEstoque(),dados.imagem(),id,Banco.id(usuario));
-        if (atualizados==0) throw ApiException.naoEncontrado();
+              and (?::integer is null or quantidade_estoque=?)
+            """,dados.nome().trim(),PerfilService.seguro(dados.descricao()),dados.preco(),dados.categoria(),dados.quantidadeEstoque(),dados.unidadeOuPadrao(),dados.imagem(),id,Banco.id(usuario),
+            dados.estoqueAnterior(),dados.estoqueAnterior());
+        if (atualizados==0) {
+            // Sem linha atualizada: ou o produto não é deste produtor, ou o estoque mudou desde que o formulário abriu.
+            var atual=banco.jdbc.queryForList("select quantidade_estoque from agroconnect.produtos where id=? and produtor_id=? and ativo=true",
+                Integer.class,id,Banco.id(usuario));
+            if (atual.isEmpty()) throw ApiException.naoEncontrado();
+            throw ApiException.conflito("O estoque mudou porque chegaram pedidos (agora: "+atual.get(0)+"). Confira a quantidade e salve de novo.");
+        }
         return obter(id);
     }
     public void remover(Map<String,Object> usuario, UUID id) {

@@ -1,178 +1,107 @@
-# 🌱 AgroConnect
+# AgroConnect
 
-> Conectando produtores rurais a consumidores urbanos, sem intermediários.
+O AgroConnect é o projeto de startup que estamos desenvolvendo na faculdade. A ideia é aproximar produtores rurais de pessoas que querem comprar seus produtos. Fizemos o aplicativo em React Native com Expo e, nesta etapa, conectamos ele a uma API Java (Spring Boot) e ao Supabase.
 
-O **AgroConnect** é o projeto de startup que estamos desenvolvendo no curso de **Análise e Desenvolvimento de Sistemas (ADS) da FATEC Curitiba**. A ideia é aproximar quem produz no campo de quem quer comprar na cidade: o produtor anuncia seus produtos, o consumidor monta o carrinho e faz o pedido direto pelo celular.
+## O que fizemos
 
-O aplicativo é feito em **React Native com Expo** e conversa com uma **API Java (Spring Boot)**, que guarda os dados no **PostgreSQL do Supabase**.
+- **Cadastro e login:** produtor e consumidor criam conta e entram com e-mail e senha. O Supabase cuida da autenticação. Se a confirmação por e-mail estiver ativa, é preciso confirmar a conta antes de entrar.
+- **Recuperação de senha:** o usuário solicita um e-mail para definir outra senha. Quem está logado também pode trocar a senha.
+- **Perfil:** cada pessoa edita seus dados. O produtor informa dados da fazenda; o consumidor, o endereço para entrega.
+- **Produtos:** o produtor cadastra, edita e retira produtos do catálogo, com preço, estoque e URL de imagem.
+- **Pedidos:** o consumidor monta o carrinho e finaliza a compra. A API confere preço e estoque no banco antes de registrar o pedido. O produtor atualiza o andamento.
+- **Avaliações:** depois da entrega, o consumidor pode avaliar o pedido.
+- **Privacidade (LGPD):** a tela de Política de Privacidade explica quais dados coletamos, para que, com quem compartilhamos e como o titular exerce seus direitos. Ela abre pela tela inicial, pelo cadastro e por Meu Perfil, e o cadastro só é concluído após o usuário confirmar a leitura.
+- **Excluir conta:** em Meu Perfil, o usuário exclui a própria conta confirmando a senha. O login é apagado no Supabase Auth, o perfil é anonimizado, os produtos saem do catálogo e os comentários das avaliações são apagados. Os pedidos antigos ficam guardados sem o nome da pessoa. Contas com pedidos em andamento precisam concluir ou cancelar esses pedidos antes.
 
----
+Os dados de usuários, produtos, pedidos e avaliações ficam no Supabase. O carrinho fica salvo no celular, separado por conta, até a compra ser finalizada: fechar o app não apaga os itens. Os preços do carrinho são uma estimativa; o valor final é sempre calculado pela API.
 
-## 📁 Estrutura do projeto
+## Como organizamos o projeto
 
-```
-AgroConnect/
-├── frontend/          → Aplicativo mobile (React Native + Expo)
-│   ├── src/
-│   │   ├── screens/       → Telas (auth, consumidor, produtor, conta)
-│   │   ├── components/    → Componentes reutilizáveis (botões, cards, menu…)
-│   │   ├── constants/     → Valores fixos (categorias, status de pedido)
-│   │   ├── navigation/    → Rotas e pilhas de navegação
-│   │   ├── context/       → Estado global (login, carrinho, pedidos…)
-│   │   ├── services/      → Comunicação com a API
-│   │   ├── hooks/         → Hooks personalizados
-│   │   └── utils/         → Funções auxiliares
-│   ├── assets/            → Ícones e splash
-│   ├── tests/             → Testes do app (node --test)
-│   ├── scripts/           → Script de verificação dos fontes
-│   ├── App.js · index.js  → Ponto de entrada do app
-│   └── app.json · eas.json · package.json
-│
-├── backend/           → API REST em Java 17 + Spring Boot
-│   └── src/main/java/br/com/agroconnect/
-│
-├── database/          → Scripts SQL do Supabase (PostgreSQL)
-│   ├── 001_estrutura.sql
-│   └── 002_exclusao_conta.sql
-│
-├── docs/              → Documentação técnica
-│   ├── API.md             → Rotas da API e decisões
-│   ├── ALTERACOES.md      → Histórico de mudanças
-│   ├── VALIDACAO.md       → Testes feitos e pendências
-│   └── modelos-dominio/   → Classes de domínio dos exercícios (não usadas pelo app)
-│
-└── README.md
-```
-
-Cada pasta principal tem o seu próprio `README.md` com detalhes.
-
----
-
-## 🛠️ Tecnologias
-
-| Camada | Tecnologias |
+| Pasta/arquivo | Para que serve |
 |---|---|
-| **Frontend** | React Native 0.86, Expo SDK 57, React Navigation 7, Expo SecureStore |
-| **Backend** | Java 17, Spring Boot 3.5, Bean Validation, JdbcTemplate |
-| **Banco de dados** | PostgreSQL 17 no Supabase, com RLS |
-| **Autenticação** | Supabase Auth (e-mail e senha) |
-| **Build** | EAS Build (APK Android), Maven Wrapper |
+| `src/screens` | Telas do aplicativo |
+| `src/context` e `src/services` | Estado do app, sessão e chamadas da API |
+| `backend` | API Java: recebe as solicitações, valida o usuário e acessa o banco |
+| `supabase/001_estrutura.sql` | Script das tabelas |
+| `supabase/003_unidade_produto.sql` | Unidade de venda dos produtos (kg, maço, dúzia...) |
+| `supabase/004_pagamento.sql` | Forma de pagamento dos pedidos (pagamento simulado) |
+| `docs/API.md` | Resumo das rotas da API |
+| `docs/VALIDACAO.md` | Verificações feitas e o que ainda precisamos testar |
 
-### Como as partes se conectam
+O app conversa com a API Java, e a API acessa as tabelas. A senha do banco fica apenas no computador ou servidor que executa o backend.
 
+## Como rodar
+
+Usamos Node.js 22.13 ou superior, JDK 17 ou superior e um emulador iniciado pelo Android Studio. Este aplicativo usa Expo, não Flutter.
+
+### 1. Banco no Supabase
+
+As seis tabelas do nosso projeto já foram criadas no schema `agroconnect`. Não precisamos executar o `001` novamente nesse banco. Para montar a estrutura em outro projeto, execute `supabase/001_estrutura.sql` no SQL Editor e ative a autenticação por e-mail e senha.
+
+Para a exclusão de conta funcionar, execute também `supabase/002_exclusao_conta.sql` no SQL Editor (inclusive no banco que já existe). Ele adiciona a coluna `excluido_em` e solta o vínculo entre `agroconnect.usuarios` e `auth.users`, para o login poder ser apagado sem perder o histórico de pedidos. O script pode ser executado mais de uma vez.
+
+Para a unidade de venda dos produtos, execute também `supabase/003_unidade_produto.sql` no SQL Editor (inclusive no banco que já existe). Ele adiciona a coluna `unidade` em `agroconnect.produtos`; os produtos antigos ficam como "unidade". Execute o script **antes** de subir a nova versão da API. O script pode ser executado mais de uma vez.
+
+Para a etapa de pagamento, execute também `supabase/004_pagamento.sql` (inclusive no banco que já existe), **antes** de subir a nova versão da API. Ele adiciona `forma_pagamento` e `pago` em `agroconnect.pedidos`. O pagamento é **simulado**: Pix e cartão são aprovados automaticamente e nenhum valor é cobrado; pedidos antigos ficam como "pagar na entrega". O script pode ser executado mais de uma vez.
+
+As tabelas ficam em um schema privado. O aplicativo acessa os dados pela API Java; não é necessário expor `agroconnect` na Data API. Se o Table Editor não mostrar as tabelas, consulte no SQL Editor:
+
+```sql
+select * from agroconnect.usuarios;
 ```
-📱 App (frontend)  ──HTTP/JSON──▶  ☕ API Java (backend)  ──JDBC──▶  🐘 PostgreSQL (Supabase)
-                                         │
-                                         └──▶ 🔐 Supabase Auth
-```
 
-O app **nunca** acessa o banco diretamente. A senha do banco fica só na máquina que executa o backend.
+### 2. Backend Java
 
----
-
-## ✨ Funcionalidades
-
-- **Cadastro e login** de produtores e consumidores, com autenticação pelo Supabase.
-- **Recuperação e troca de senha.**
-- **Perfil:** o produtor informa os dados da fazenda; o consumidor, o endereço de entrega.
-- **Produtos:** o produtor cadastra, edita e retira produtos (preço, estoque e URL da imagem).
-- **Carrinho e pedidos:** o consumidor finaliza a compra e a API confere preço e estoque no banco. O produtor acompanha e atualiza o andamento.
-- **Avaliações** depois da entrega.
-- **Privacidade (LGPD):** tela de Política de Privacidade, com confirmação obrigatória no cadastro.
-- **Excluir conta:** o usuário apaga a própria conta confirmando a senha. Os dados pessoais são anonimizados e o histórico de pedidos é mantido.
-
----
-
-## 🚀 Como rodar
-
-**Pré-requisitos:** Node.js 22.13+, JDK 17+ e um emulador Android (Android Studio).
-
-### 1. Banco de dados
-
-As tabelas já estão criadas no schema `agroconnect` do nosso Supabase. Para montar em outro projeto, execute no **SQL Editor**:
-
-1. `database/001_estrutura.sql`
-2. `database/002_exclusao_conta.sql`
-
-Depois, ative a autenticação por e-mail e senha. Mais detalhes em [`database/README.md`](database/README.md).
-
-### 2. Backend
+Abra um terminal na pasta do projeto e crie o arquivo de configuração local:
 
 ```powershell
 cd backend
-Copy-Item .env.example .env      # preencha DB_PASSWORD
+Copy-Item .env.example .env
+```
+
+No `backend/.env`, preencha `DB_PASSWORD` com a senha do banco. O exemplo já contém o endereço do nosso projeto Supabase e o usuário do banco. Se usar outro projeto, atualize os demais valores. **Não envie o `.env` ao GitHub.**
+
+Para iniciar:
+
+```powershell
 .\mvnw.cmd spring-boot:run
 ```
 
-Teste em `http://localhost:8080/api/saude`. O esperado é `{"status":"ok","banco":"conectado"}`.
+Se o Maven Wrapper falhar no Windows, use um Maven instalado: `mvn spring-boot:run`. O Java precisa apontar para um **JDK**, porque o backend é compilado ao iniciar. Deixe esse terminal aberto e acesse `http://localhost:8080/api/saude`. A resposta esperada é `{"status":"ok","banco":"conectado"}`.
 
-### 3. Frontend
+### 3. Aplicativo
 
-Em **outro terminal**, com o emulador aberto:
+Inicie o emulador no Android Studio. Abra outro terminal na **pasta principal** do projeto:
 
 ```powershell
-cd frontend
-npm install
+Copy-Item .env.example .env
+npm ci
 npm run android
 ```
 
-No emulador, o app já usa `http://10.0.2.2:8080`, sem configuração. Em um celular físico, crie o `.env` (`Copy-Item .env.example .env`) e troque `10.0.2.2` pelo IP do computador.
+No emulador padrão do Android Studio, o `.env` da pasta principal deve conter:
 
----
-
-## ✅ Testes
-
-```powershell
-# Frontend
-cd frontend
-npm run verificar   # sintaxe e imports
-npm test            # testes (carrinho, preço, produto, cliente HTTP…)
-npm run lint        # revisor automático (ESLint)
-npm run formatar    # formata o código no padrão do projeto (Prettier)
-
-# Backend
-cd backend
-.\mvnw.cmd test     # testes de integração e de autenticação
+```properties
+EXPO_PUBLIC_API_URL=http://10.0.2.2:8080
 ```
 
----
+Esse endereço permite que o emulador encontre a API rodando no PC. Para usar um celular na mesma rede, coloque o IP do computador no lugar de `10.0.2.2` e inicie com `npm start`. Depois de alterar o `.env`, reinicie o Expo com `npx expo start --clear`.
 
-## 🎤 Roteiro para a apresentação
+## Teste rápido para apresentar
 
-1. Crie uma conta de **produtor** e cadastre dois produtos.
-2. Saia e crie uma conta de **consumidor** com outro e-mail.
-3. Adicione um produto ao carrinho e finalize o pedido.
-4. Entre como produtor e avance o pedido até **entregue**.
-5. Volte ao consumidor e faça uma **avaliação**.
-6. Confira os registros no Supabase.
-7. Crie uma terceira conta e teste **Meu Perfil → Excluir minha conta**.
+1. Crie uma conta de produtor e confirme o e-mail, se solicitado.
+2. Entre como produtor e cadastre dois produtos com preço e estoque.
+3. Saia e crie uma conta de consumidor com outro e-mail.
+4. Coloque um produto no carrinho, feche o app pela tela de multitarefa e abra de novo: o carrinho deve continuar lá. Depois finalize o pedido.
+5. Entre como produtor e avance o pedido até entregue.
+6. Volte à conta do consumidor e faça uma avaliação.
+7. Confira os registros no Supabase e teste a edição do perfil e a recuperação de senha.
+8. Crie uma terceira conta, entre em Meu Perfil → Excluir minha conta e confirme com a senha. Ela deve voltar para a tela inicial e não conseguir entrar de novo.
 
----
+Para o link de recuperação funcionar, o endereço de `AUTH_REDIRECT_URL` no `backend/.env` precisa estar permitido em **Authentication → URL Configuration → Redirect URLs** no Supabase. No mesmo PC, usamos `http://localhost:8080/recuperar-senha.html`. Para abrir no celular, configure o IP do PC.
 
-## 🚧 Limitações desta versão
+## Limites desta versão
 
-- A imagem do produto é informada por URL; ainda não há upload para o Storage.
-- Sem pagamento online, cálculo real de frete, rastreamento por GPS ou notificações push.
-- O CNPJ é validado só pelo número de dígitos, sem consulta à Receita Federal.
-- As listagens são limitadas (1.000 produtos e 500 pedidos por conta). Um catálogo maior vai precisar de paginação.
+O produtor informa uma URL de imagem; ainda não fizemos upload para o Storage. Também não há pagamento online, cálculo real de frete, rastreamento por GPS nem notificações push. As classes de domínio criadas nos exercícios da faculdade (incluindo sensor e notificação) ficam em `docs/exercicios/models` e não fazem parte do aplicativo. Na demonstração, aceitamos CNPJ com 14 dígitos, sem consulta à Receita Federal.
 
----
-
-## 👥 Equipe
-
-| Integrante | Papel |
-|---|---|
-| Bileu | Desenvolvimento do app (React Native) |
-| Josileudo | |
-| Luiz Cesar | |
-| Luiz Felipe | |
-| Ruan | |
-
-**Orientador:** Prof. Aroldo Ferraz
-**Instituição:** FATEC Curitiba, Análise e Desenvolvimento de Sistemas
-
----
-
-## 📄 Licença
-
-Veja o arquivo [`LICENSE`](LICENSE).
+Para conferir o código, usamos `npm run verificar`, `npm test` e os testes Java em `backend`. O roteiro acima ainda precisa ser executado no emulador ou celular com o backend ligado.

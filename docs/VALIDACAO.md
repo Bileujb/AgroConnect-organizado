@@ -2,8 +2,8 @@
 
 ## Executado no ambiente de desenvolvimento
 
-- Sintaxe JavaScript/JSX e resolução de imports locais: 42 arquivos conferidos.
-- Testes do cliente: 8 aprovados, 0 falhas. Cobrem estoque total do carrinho, quantidades inválidas, carrinho com produtores diferentes, erros HTTP, renovação concorrente da sessão, falha de rede e respostas antigas após sair/trocar de conta.
+- Sintaxe JavaScript/JSX e resolução de imports locais: 35 arquivos conferidos (após remover o código morto).
+- Testes do cliente: 12 aprovados, 0 falhas. Cobrem a gravação e leitura do carrinho salvo (chave por conta e dados corrompidos), estoque total do carrinho, quantidades inválidas, carrinho com produtores diferentes, erros HTTP, renovação concorrente da sessão, falha de rede e respostas antigas após sair/trocar de conta.
 - Compatibilidade de dependências: `expo install --check` aprovado, com Expo 57.0.29 e React Native 0.86.3.
 - Exportação do bundle Android pelo Expo SDK 57: concluída.
 - Exportação web pelo Expo: concluída. A interface foi planejada principalmente para Android.

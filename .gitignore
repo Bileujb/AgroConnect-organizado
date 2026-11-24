@@ -37,8 +37,8 @@ yarn-error.*
 *.tsbuildinfo
 
 # generated native folders
-/frontend/ios
-/frontend/android
+/ios
+/android
 
 # Configuração local e build Java
 .env

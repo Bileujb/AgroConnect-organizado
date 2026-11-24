@@ -31,10 +31,20 @@ public final class Dados {
         @NotNull @DecimalMin("0.01") @DecimalMax("99999999.99") @Digits(integer=8,fraction=2) BigDecimal preco,
         @NotBlank @Pattern(regexp="Verduras|Legumes|Frutas|Derivados") String categoria,
         @NotNull @Min(0) @Max(1000000) Integer quantidadeEstoque,
-        @Size(max=2048) String imagem) {}
+        @Size(max=2048) String imagem,
+        @Pattern(regexp="kg|unidade|maco|duzia|bandeja|litro|pacote") String unidade,
+        // Estoque que o formulário de edição mostrava. Se o banco mudou (chegou pedido), a edição é recusada.
+        @Min(0) @Max(1000000) Integer estoqueAnterior) {
+        // Clientes antigos não mandam a unidade: assume "unidade".
+        public String unidadeOuPadrao() { return unidade==null ? "unidade" : unidade; }
+    }
     public record Item(@NotNull UUID produtoId, @Min(1) @Max(10000) int quantidade) {}
     public record Checkout(@NotBlank @Size(max=100) String chave,
-                           @NotEmpty @Size(max=100) List<@NotNull @Valid Item> itens) {}
+                           @NotEmpty @Size(max=100) List<@NotNull @Valid Item> itens,
+                           // Pagamento simulado. Sem valor (cliente antigo): paga na entrega.
+                           @Pattern(regexp="pix|cartao|entrega") String formaPagamento) {
+        public String formaOuPadrao() { return formaPagamento==null ? "entrega" : formaPagamento; }
+    }
     public record Status(@NotBlank @Pattern(regexp="confirmado|em_rota|entregue|cancelado") String status) {}
     public record Avaliacao(@NotNull UUID pedidoId, @NotNull @Min(1) @Max(5) Integer nota,
                             @Size(max=1000) String comentario) {}

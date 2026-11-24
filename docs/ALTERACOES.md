@@ -30,6 +30,14 @@ Agora, o Supabase Auth autentica as contas e a API Java persiste os dados no Pos
 - Schema privado com seis tabelas, índices, chaves estrangeiras, restrições e RLS.
 - Configurações de ambiente separadas do código e Maven Wrapper para Windows/Linux/macOS.
 - Testes automatizados e instruções para executar e demonstrar o projeto.
-- Rota `POST /api/perfil/excluir`, script `database/002_exclusao_conta.sql` e testes de integração da exclusão de conta.
+- Rota `POST /api/perfil/excluir`, script `supabase/002_exclusao_conta.sql` e testes de integração da exclusão de conta.
 
 O projeto não foi publicado em um servidor nem enviado automaticamente ao GitHub. O ZIP contém o código para vocês configurarem, executarem e versionarem no repositório do grupo.
+
+## Organização e correções (novembro/2026)
+
+- **Carrinho salvo no aparelho:** o carrinho passou a ser gravado com AsyncStorage, em uma chave separada por conta (`agroconnect.carrinho.<id>`). Fechar o app não apaga mais os itens, outra conta no mesmo celular não vê o carrinho e a exclusão de conta remove o carrinho salvo. A leitura descarta dados corrompidos em vez de travar o app. Testes novos em `tests/carrinho.test.mjs`.
+- **Código morto removido:** a pasta `src/database` (protótipo SQLite comentado) foi apagada. O histórico continua no Git.
+- **Models dos exercícios:** as classes de `src/models` não eram importadas pelo app e foram movidas para `docs/exercicios/models`, como registro do trabalho acadêmico.
+- **Funções sem uso:** saíram `mediaDoProdutor` (calculava a média só com as avaliações da própria conta; a média correta já vem da API em `notaMedia`) e `pedidosDoProdutor`.
+- **README:** a descrição do carrinho e o roteiro de demonstração foram atualizados.

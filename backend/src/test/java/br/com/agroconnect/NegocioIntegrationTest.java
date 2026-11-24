@@ -49,9 +49,12 @@ class NegocioIntegrationTest {
         try (var c=pg.getPostgresDatabase().getConnection(); var s=c.createStatement()) {
             // Somente o PostgreSQL descartável de testes recebe estas tabelas/roles fictícias.
             s.execute("create schema auth; create table auth.users(id uuid primary key); create role anon; create role authenticated;");
-            sql=Files.readString(Path.of("../database/001_estrutura.sql"));
+            sql=Files.readString(Path.of("../supabase/001_estrutura.sql"));
             s.execute(sql);
-            s.execute(Files.readString(Path.of("../database/002_exclusao_conta.sql")));
+            s.execute(Files.readString(Path.of("../supabase/002_exclusao_conta.sql")));
+            // Os scripts novos também precisam rodar em cima de um banco que já está completo.
+            s.execute(Files.readString(Path.of("../supabase/003_unidade_produto.sql")));
+            s.execute(Files.readString(Path.of("../supabase/004_pagamento.sql")));
         }
     }
     @BeforeEach void preparar() {
@@ -120,6 +123,33 @@ class NegocioIntegrationTest {
         var adulterado=new HashMap<>(checkout("fraude",ALFACE,1)); adulterado.put("valorTotal",0.01);
         assertThat(chamar("consumidor",HttpMethod.POST,"/api/pedidos",adulterado).getStatusCode().value()).isEqualTo(400);
         assertThat(estoque(ALFACE)).isEqualTo(5);
+    }
+    @Test void edicaoComEstoqueDesatualizadoNaoDevolveEstoqueJaVendido() {
+        // O produtor abriu "Editar" com 5 disponíveis; enquanto isso um consumidor comprou 2.
+        pedidos(chamar("consumidor",HttpMethod.POST,"/api/pedidos",checkout("antes-da-edicao",ALFACE,2)));
+        assertThat(estoque(ALFACE)).isEqualTo(3);
+        var edicao=new HashMap<String,Object>(Map.of("nome","Alface","preco",4,"categoria","Verduras",
+            "quantidadeEstoque",5,"estoqueAnterior",5));
+        assertThat(chamar("produtor",HttpMethod.PUT,"/api/produtos/"+ALFACE,edicao).getStatusCode().value()).isEqualTo(409);
+        assertThat(estoque(ALFACE)).isEqualTo(3);
+        // Com o formulário atualizado (3), a edição passa.
+        edicao.put("quantidadeEstoque",3); edicao.put("estoqueAnterior",3);
+        assertThat(chamar("produtor",HttpMethod.PUT,"/api/produtos/"+ALFACE,edicao).getStatusCode().value()).isEqualTo(200);
+        assertThat(estoque(ALFACE)).isEqualTo(3);
+        // Pedir mais do que sobrou continua bloqueado.
+        assertThat(chamar("consumidor2",HttpMethod.POST,"/api/pedidos",checkout("depois",ALFACE,4)).getStatusCode().value()).isEqualTo(409);
+        assertThat(estoque(ALFACE)).isEqualTo(3);
+    }
+    @Test void formaDePagamentoFicaSalvaNoPedido() {
+        var comPix=new HashMap<>(checkout("pix",ALFACE,1)); comPix.put("formaPagamento","pix");
+        var pedido=pedidos(chamar("consumidor",HttpMethod.POST,"/api/pedidos",comPix)).get(0);
+        assertThat(pedido.get("formaPagamento")).isEqualTo("pix"); assertThat(pedido.get("pago")).isEqualTo(true);
+        // Sem forma informada (versão antiga do app): paga na entrega.
+        pedido=pedidos(chamar("consumidor",HttpMethod.POST,"/api/pedidos",checkout("antigo",ALFACE,1))).get(0);
+        assertThat(pedido.get("formaPagamento")).isEqualTo("entrega"); assertThat(pedido.get("pago")).isEqualTo(false);
+        var invalida=new HashMap<>(checkout("boleto",ALFACE,1)); invalida.put("formaPagamento","boleto");
+        assertThat(chamar("consumidor",HttpMethod.POST,"/api/pedidos",invalida).getStatusCode().value()).isEqualTo(400);
+        assertThat(estoque(ALFACE)).isEqualTo(3);
     }
     @Test void separaProdutoresECalculaTotalComPrecosDoBanco() {
         var resposta=chamar("consumidor",HttpMethod.POST,"/api/pedidos",Map.of("chave","misto","itens",List.of(
