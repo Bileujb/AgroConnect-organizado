@@ -23,6 +23,7 @@ Os dados de usuários, produtos, pedidos e avaliações ficam no Supabase. O car
 | `src/context` e `src/services` | Estado do app, sessão e chamadas da API |
 | `backend` | API Java: recebe as solicitações, valida o usuário e acessa o banco |
 | `supabase/001_estrutura.sql` | Script das tabelas |
+| `supabase/002_exclusao_conta.sql` | Ajuste para a exclusão de conta manter o histórico de pedidos |
 | `supabase/003_unidade_produto.sql` | Unidade de venda dos produtos (kg, maço, dúzia...) |
 | `supabase/004_pagamento.sql` | Forma de pagamento dos pedidos (pagamento simulado) |
 | `docs/API.md` | Resumo das rotas da API |
@@ -32,17 +33,47 @@ O app conversa com a API Java, e a API acessa as tabelas. A senha do banco fica 
 
 ## Como rodar
 
-Usamos Node.js 22.13 ou superior, JDK 17 ou superior e um emulador iniciado pelo Android Studio. Este aplicativo usa Expo, não Flutter.
+Passo a passo para Windows. Na primeira vez leva cerca de 40 minutos, quase tudo instalação. Este aplicativo usa Expo, não Flutter.
 
-### 1. Banco no Supabase
+### 1. Instalar os programas (só na primeira vez)
 
-As seis tabelas do nosso projeto já foram criadas no schema `agroconnect`. Não precisamos executar o `001` novamente nesse banco. Para montar a estrutura em outro projeto, execute `supabase/001_estrutura.sql` no SQL Editor e ative a autenticação por e-mail e senha.
+| Programa | Versão | Para quê |
+|---|---|---|
+| Git | qualquer recente | Baixar o código do GitHub |
+| Node.js | 22.13 ou mais novo (LTS) | Rodar o app (Expo) |
+| JDK (por exemplo, Temurin) | 17 ou mais novo | Rodar o backend Java |
+| Android Studio | atual | Emulador Android |
 
-Para a exclusão de conta funcionar, execute também `supabase/002_exclusao_conta.sql` no SQL Editor (inclusive no banco que já existe). Ele adiciona a coluna `excluido_em` e solta o vínculo entre `agroconnect.usuarios` e `auth.users`, para o login poder ser apagado sem perder o histórico de pedidos. O script pode ser executado mais de uma vez.
+- No instalador do JDK, marque a opção de configurar o `JAVA_HOME`.
+- No Android Studio, abra o **Device Manager** e crie um emulador (qualquer Pixel recente).
 
-Para a unidade de venda dos produtos, execute também `supabase/003_unidade_produto.sql` no SQL Editor (inclusive no banco que já existe). Ele adiciona a coluna `unidade` em `agroconnect.produtos`; os produtos antigos ficam como "unidade". Execute o script **antes** de subir a nova versão da API. O script pode ser executado mais de uma vez.
+Confira num terminal novo (PowerShell):
 
-Para a etapa de pagamento, execute também `supabase/004_pagamento.sql` (inclusive no banco que já existe), **antes** de subir a nova versão da API. Ele adiciona `forma_pagamento` e `pago` em `agroconnect.pedidos`. O pagamento é **simulado**: Pix e cartão são aprovados automaticamente e nenhum valor é cobrado; pedidos antigos ficam como "pagar na entrega". O script pode ser executado mais de uma vez.
+```powershell
+node -v
+java -version
+git --version
+```
+
+### 2. Baixar o código
+
+```powershell
+git clone https://github.com/Bileujb/AgroConnect-organizado.git
+cd AgroConnect-organizado
+```
+
+### 3. Banco no Supabase
+
+As seis tabelas do nosso projeto já foram criadas no schema `agroconnect`. Se você for usar o nosso projeto Supabase, **não precisa executar nenhum script**.
+
+Para montar a estrutura em outro projeto Supabase, execute no SQL Editor, nesta ordem, e ative a autenticação por e-mail e senha:
+
+1. `supabase/001_estrutura.sql`: cria o schema, as tabelas, os índices e o RLS.
+2. `supabase/002_exclusao_conta.sql`: adiciona a coluna `excluido_em` e solta o vínculo entre `agroconnect.usuarios` e `auth.users`, para o login poder ser apagado sem perder o histórico de pedidos.
+3. `supabase/003_unidade_produto.sql`: adiciona a coluna `unidade` em `agroconnect.produtos`; os produtos antigos ficam como "unidade".
+4. `supabase/004_pagamento.sql`: adiciona `forma_pagamento` e `pago` em `agroconnect.pedidos`. O pagamento é **simulado**: Pix e cartão são aprovados automaticamente e nenhum valor é cobrado; pedidos antigos ficam como "pagar na entrega".
+
+Os scripts podem ser executados mais de uma vez. Num banco que já existe, execute o 002, o 003 e o 004 **antes** de subir uma versão nova da API.
 
 As tabelas ficam em um schema privado. O aplicativo acessa os dados pela API Java; não é necessário expor `agroconnect` na Data API. Se o Table Editor não mostrar as tabelas, consulte no SQL Editor:
 
@@ -50,16 +81,17 @@ As tabelas ficam em um schema privado. O aplicativo acessa os dados pela API Jav
 select * from agroconnect.usuarios;
 ```
 
-### 2. Backend Java
-
-Abra um terminal na pasta do projeto e crie o arquivo de configuração local:
+### 4. Backend Java
 
 ```powershell
 cd backend
 Copy-Item .env.example .env
+notepad .env
 ```
 
-No `backend/.env`, preencha `DB_PASSWORD` com a senha do banco. O exemplo já contém o endereço do nosso projeto Supabase e o usuário do banco. Se usar outro projeto, atualize os demais valores. **Não envie o `.env` ao GitHub.**
+No `backend/.env`, preencha só o `DB_PASSWORD` com a senha do banco. O exemplo já contém o endereço do nosso projeto Supabase e o usuário do banco. Se usar outro projeto, atualize os demais valores.
+
+> **A senha não está no GitHub, e é assim que deve ser.** Leve o `.env` do seu PC num pendrive ou pegue a senha no painel do Supabase (Project Settings → Database). Se você redefinir a senha lá, atualize o `.env` de todos os PCs que usam ela. **Nunca envie o `.env` ao GitHub.**
 
 Para iniciar:
 
@@ -67,11 +99,12 @@ Para iniciar:
 .\mvnw.cmd spring-boot:run
 ```
 
-Se o Maven Wrapper falhar no Windows, use um Maven instalado: `mvn spring-boot:run`. O Java precisa apontar para um **JDK**, porque o backend é compilado ao iniciar. Deixe esse terminal aberto e acesse `http://localhost:8080/api/saude`. A resposta esperada é `{"status":"ok","banco":"conectado"}`.
+Na primeira vez demora um pouco, porque baixa as dependências. **Deixe esse terminal aberto.** Acesse `http://localhost:8080/api/saude`; a resposta esperada é `{"status":"ok","banco":"conectado"}`.
 
-### 3. Aplicativo
+### 5. Aplicativo
 
-Inicie o emulador no Android Studio. Abra outro terminal na **pasta principal** do projeto:
+1. Abra o emulador pelo Android Studio e espere o Android carregar.
+2. Abra um **segundo terminal** na **pasta principal** do projeto (não na `backend`) e rode:
 
 ```powershell
 Copy-Item .env.example .env
@@ -79,13 +112,32 @@ npm ci
 npm run android
 ```
 
-No emulador padrão do Android Studio, o `.env` da pasta principal deve conter:
+O `.env` da pasta principal já vem com:
 
 ```properties
 EXPO_PUBLIC_API_URL=http://10.0.2.2:8080
 ```
 
-Esse endereço permite que o emulador encontre a API rodando no PC. Para usar um celular na mesma rede, coloque o IP do computador no lugar de `10.0.2.2` e inicie com `npm start`. Depois de alterar o `.env`, reinicie o Expo com `npx expo start --clear`.
+Esse é o endereço que o emulador usa para chegar à API rodando no PC. O app abre sozinho no emulador. Depois de alterar o `.env`, reinicie o Expo com `npx expo start --clear`.
+
+### 6. Celular de verdade em vez do emulador
+
+1. O PC e o celular precisam estar no mesmo Wi-Fi.
+2. Descubra o IP do PC com `ipconfig` e troque no `.env` do app: `EXPO_PUBLIC_API_URL=http://SEU_IP:8080`.
+3. Rode `npx expo start --clear`.
+4. Se o celular não conectar, libere a porta 8080 no Firewall do Windows.
+
+### Problemas comuns
+
+| Sintoma | Causa provável | Solução |
+|---|---|---|
+| `/api/saude` dá erro de banco | Senha errada no `backend/.env` | Confira o `DB_PASSWORD` |
+| Erro sobre JDK ao rodar o `mvnw` | `JAVA_HOME` apontando para um JRE ou vazio | Aponte o `JAVA_HOME` para a pasta do JDK e abra outro terminal |
+| `mvnw.cmd` falha | Problema do Maven Wrapper no Windows | Instale o Maven e rode `mvn spring-boot:run` |
+| App diz "Não foi possível acessar a API" | Backend desligado ou `.env` do app errado | Confira o terminal do backend e o `EXPO_PUBLIC_API_URL` |
+| Mudou o `.env` e nada mudou | O Expo guarda os valores em cache | `npx expo start --clear` |
+| `npm ci` dá erro | Node antigo | Atualize para 22.13 ou mais novo |
+| Emulador não aparece | Emulador não foi aberto antes | Abra pelo Device Manager e rode de novo |
 
 ## Teste rápido para apresentar
 
